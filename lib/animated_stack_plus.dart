@@ -78,17 +78,18 @@ class AnimatedStack extends StatefulWidget {
     this.enableClickToDismiss = true,
     this.preventForegroundInteractions = true,
     this.onForegroundCallback,
-  }) : assert(scaleHeight >= 40, 'scaleHeight must be at least 40'),
-       assert(
-         !(enableClickToDismiss && !preventForegroundInteractions),
-         'enableClickToDismiss can only be true if preventForegroundInteractions is true',
-       );
+  })  : assert(scaleHeight >= 40, 'scaleHeight must be at least 40'),
+        assert(
+          !(enableClickToDismiss && !preventForegroundInteractions),
+          'enableClickToDismiss can only be true if preventForegroundInteractions is true',
+        );
 
   @override
   State<AnimatedStack> createState() => _AnimatedStackState();
 }
 
-class _AnimatedStackState extends State<AnimatedStack> with SingleTickerProviderStateMixin {
+class _AnimatedStackState extends State<AnimatedStack>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<Offset> _slideOffset;
   bool _opened = false;
@@ -96,10 +97,12 @@ class _AnimatedStackState extends State<AnimatedStack> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(vsync: this, duration: widget.slideAnimationDuration);
+    _animationController = AnimationController(
+        vsync: this, duration: widget.slideAnimationDuration);
 
     // Define the offset for slide animation, updated later with screen size
-    _slideOffset = Tween<Offset>(begin: Offset.zero, end: Offset.zero).animate(_animationController);
+    _slideOffset = Tween<Offset>(begin: Offset.zero, end: Offset.zero)
+        .animate(_animationController);
   }
 
   /// Toggle FAB open/close state
@@ -132,7 +135,9 @@ class _AnimatedStackState extends State<AnimatedStack> with SingleTickerProvider
     final yScale = ((widget.scaleHeight + 32) / screenHeight);
 
     // Re-define slide offset on every build
-    _slideOffset = Tween<Offset>(begin: Offset.zero, end: Offset(-xScale, -yScale)).animate(
+    _slideOffset =
+        Tween<Offset>(begin: Offset.zero, end: Offset(-xScale, -yScale))
+            .animate(
       CurvedAnimation(
         parent: _animationController,
         curve: widget.openAnimationCurve,
@@ -168,7 +173,8 @@ class _AnimatedStackState extends State<AnimatedStack> with SingleTickerProvider
                   right: widget.scaleWidth + 20,
                   bottom: 24,
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: widget.scaleHeight - 16),
+                    constraints:
+                        BoxConstraints(maxHeight: widget.scaleHeight - 16),
                     child: widget.bottomWidgetBuilder(_closeFab),
                   ),
                 ),

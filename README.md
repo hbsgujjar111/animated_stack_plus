@@ -3,13 +3,14 @@
 [![pub version](https://img.shields.io/pub/v/animated_stack_plus.svg)](https://pub.dev/packages/animated_stack_plus)
 [![likes](https://img.shields.io/pub/likes/animated_stack_plus.svg)](https://pub.dev/packages/animated_stack_plus/score)
 
-![AnimatedStackPlus Demo](example/mobile-example.gif)
+![AnimatedStackPlus Demo Mobile](example/mobile-example.gif)
+![AnimatedStackPlus Demo Web](example/web-example.gif)
 
 A flexible and modern **animated Floating Action Button (FAB) stack menu** for Flutter — inspired by the original [`animated_stack`](https://pub.dev/packages/animated_stack), but fully rebuilt with customizable builders, animations, and interaction handling.
 
 ---
 
-## 🚀 Features
+## Features
 
 - Beautiful **FAB-based sliding stack**
 - Customizable **top (column)** and **bottom (row)** action layouts
@@ -30,7 +31,7 @@ A flexible and modern **animated Floating Action Button (FAB) stack menu** for F
 Add to your `pubspec.yaml`:
 ```yaml
 dependencies:
-  animated_stack_plus: ^1.0.0
+  animated_stack_plus: ^1.0.1
 ```
 
 Then run:

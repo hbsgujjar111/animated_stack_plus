@@ -11,7 +11,8 @@ class ExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Create the global key
-    final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+    final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+        GlobalKey<ScaffoldMessengerState>();
 
     return MaterialApp(
       scaffoldMessengerKey: scaffoldMessengerKey, // assign the key
@@ -32,7 +33,9 @@ class ExampleApp extends StatelessWidget {
               style: IconButton.styleFrom(backgroundColor: Colors.pink),
               onPressed: () {
                 closeFab();
-                scaffoldMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Share button pressed')));
+                scaffoldMessengerKey.currentState?.showSnackBar(
+                  const SnackBar(content: Text('Share button pressed')),
+                );
               },
               icon: const Icon(Icons.share, color: Colors.white),
             ),
@@ -68,7 +71,10 @@ class ExampleApp extends StatelessWidget {
         // Foreground main screen
         foregroundWidget: Scaffold(
           appBar: AppBar(
-            title: const Text('AnimatedStackPlus Example', style: TextStyle(color: Colors.white)),
+            title: const Text(
+              'AnimatedStackPlus Example',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.teal,
             centerTitle: true,
           ),
