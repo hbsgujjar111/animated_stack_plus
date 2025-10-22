@@ -1,17 +1,20 @@
 name: animated_stack_plus
 description: >
-  A customizable and responsive animated stack widget inspired by the original `animated_stack` package. 
-  Supports expandable FAB with top/bottom content, auto-dismiss, and smooth animations for web and mobile.
-
+  A flexible and modern animated Floating Action Button (FAB) stack menu for Flutter.
+  Supports separate top and bottom action layouts, custom icons, tap handling, and smooth animations.
 version: 1.0.0
-
-homepage: https://github.com/your-username/animated_stack_plus
-repository: https://github.com/your-username/animated_stack_plus
-issue_tracker: https://github.com/your-username/animated_stack_plus/issues
+homepage: https://github.com/hbsgujjar111/animated_stack_plus
+repository: https://github.com/hbsgujjar111/animated_stack_plus
+issue_tracker: https://github.com/hbsgujjar111/animated_stack_plus/issues
+topics:
+  - fab
+  - animation
+  - animatedstack
+  - widget
+  - flutter
 
 environment:
-  sdk: ^3.9.2
-  flutter: ">=1.17.0"
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -21,14 +24,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-
-# Optional but recommended
-topics:
-  - animation
-  - fab
-  - floatingactionbutton
-  - animatedfab
-  - animatedstack
 
 flutter:
   uses-material-design: true
