@@ -10,29 +10,35 @@ class ExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Create the global key
+    // Global ScaffoldMessengerState Key allows posting SnackBar notifications
+    // globally from background actions that lack direct nestedBuildContext access.
     final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
         GlobalKey<ScaffoldMessengerState>();
 
     return MaterialApp(
-      scaffoldMessengerKey: scaffoldMessengerKey, // assign the key
+      scaffoldMessengerKey: scaffoldMessengerKey,
       title: 'AnimatedStackPlus Example',
+      debugShowCheckedModeBanner: false,
       home: AnimatedStack(
         backgroundColor: Colors.grey[200]!,
         fabBackgroundColor: Colors.teal,
-        fabOpenIcon: const Icon(Icons.menu, color: Colors.white),
-        fabCloseIcon: const Icon(Icons.close, color: Colors.white),
-        scaleWidth: 100,
-        scaleHeight: 100,
 
-        // Column of buttons (top stack)
+        // Custom Widgets (allowing complete design freedom over standard Icon constraints)
+        fabOpenWidget: const Icon(Icons.menu, color: Colors.white),
+        fabCloseWidget: const Icon(Icons.close, color: Colors.white),
+
+        // Decoupled spacing definitions
+        scaleWidth: 60,
+        scaleHeight: 40,
+        // Expanded height to comfortably accommodate vertical action rows
+        // Vertical action buttons builder
         columnWidgetBuilder: (closeFab) => Column(
           spacing: 20,
           children: [
             IconButton(
               style: IconButton.styleFrom(backgroundColor: Colors.pink),
               onPressed: () {
-                closeFab();
+                closeFab(); // Automatically closes the menu drawer
                 scaffoldMessengerKey.currentState?.showSnackBar(
                   const SnackBar(content: Text('Share button pressed')),
                 );
@@ -52,7 +58,7 @@ class ExampleApp extends StatelessWidget {
           ],
         ),
 
-        // Row of buttons (bottom stack)
+        // Horizontal action buttons builder
         bottomWidgetBuilder: (closeFab) => Row(
           children: [
             IconButton(
@@ -68,7 +74,7 @@ class ExampleApp extends StatelessWidget {
           ],
         ),
 
-        // Foreground main screen
+        // Your main application scaffold which translates back during active FAB states
         foregroundWidget: Scaffold(
           appBar: AppBar(
             title: const Text(
@@ -78,7 +84,12 @@ class ExampleApp extends StatelessWidget {
             backgroundColor: Colors.teal,
             centerTitle: true,
           ),
-          body: const Center(child: Text('Hello World')),
+          body: const Center(
+            child: Text(
+              'Hello World',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            ),
+          ),
         ),
       ),
     );

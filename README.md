@@ -15,12 +15,13 @@ A flexible and modern **animated Floating Action Button (FAB) stack menu** for F
 - Beautiful **FAB-based sliding stack**
 - Customizable **top (column)** and **bottom (row)** action layouts
 - Easy `closeFab()` callback passed to all actions
-- Separate **open/close FAB icons** as full Widgets (not just IconData)
-- Fully configurable **animation duration**, **curves**, and **background color**
-- Safe foreground interaction with optional blocking overlay
+- Separate **open/close FAB widgets** (not just IconData)
+- Fully configurable **animation duration**, **curves**, and **background colors**
+- Safe foreground interaction with optional **fading dim overlay**
 - **Click outside to dismiss** the FAB menu
+- **Native SnackBar support** (entire menu shifts together in unison with Scaffold layout shifts)
 - Works on **mobile**, **tablet**, and **web**
-- Modern Flutter compatibility with updated APIs
+- Modern Flutter compatibility (Dart 3.x with updated SDK parameters)
 
 ---
 
@@ -31,7 +32,7 @@ A flexible and modern **animated Floating Action Button (FAB) stack menu** for F
 Add to your `pubspec.yaml`:
 ```yaml
 dependencies:
-  animated_stack_plus: ^1.0.1
+  animated_stack_plus: ^1.1.0
 ```
 
 Then run:
@@ -69,13 +70,15 @@ class ExampleApp extends StatelessWidget {
     return MaterialApp(
       scaffoldMessengerKey: scaffoldMessengerKey,
       title: 'AnimatedStackPlus Example',
+      debugShowCheckedModeBanner: false,
       home: AnimatedStack(
         backgroundColor: Colors.grey[200]!,
         fabBackgroundColor: Colors.teal,
-        fabOpenIcon: const Icon(Icons.menu, color: Colors.white),
-        fabCloseIcon: const Icon(Icons.close, color: Colors.white),
-        scaleWidth: 100,
-        scaleHeight: 100,
+        // Accept generic widgets instead of icons
+        fabOpenWidget: const Icon(Icons.menu, color: Colors.white),
+        fabCloseWidget: const Icon(Icons.close, color: Colors.white),
+        scaleWidth: 60,
+        scaleHeight: 60, // Height expanded to accommodate vertical action button height
 
         // Column of buttons (top stack)
         columnWidgetBuilder: (closeFab) => Column(
@@ -140,21 +143,25 @@ class ExampleApp extends StatelessWidget {
 
 ## ⚙️ Parameters
 
-| Name                            | Type                                     | Description                                          |
-|---------------------------------|------------------------------------------|------------------------------------------------------|
-| `foregroundWidget`              | `Widget`                                 | Main content shown under the FAB stack               |
-| `columnWidgetBuilder`           | `Widget Function(VoidCallback closeFab)` | Builder for vertical (top) actions                   |
-| `bottomWidgetBuilder`           | `Widget Function(VoidCallback closeFab)` | Builder for horizontal (bottom) actions              |
-| `fabBackgroundColor`            | `Color`                                  | FAB background color                                 |
-| `fabOpenIcon`                   | `Widget`                                 | Icon widget when the menu is closed                  |
-| `fabCloseIcon`                  | `Widget`                                 | Icon widget when the menu is open                    |
-| `scaleWidth` / `scaleHeight`    | `double`                                 | How much the foreground scales when FAB opens        |
-| `slideAnimationDuration`        | `Duration`                               | Duration of the slide animation                      |
-| `openAnimationCurve`            | `Curve`                                  | Curve when opening the FAB stack                     |
-| `closeAnimationCurve`           | `Curve`                                  | Curve when closing the FAB stack                     |
-| `enableClickToDismiss`          | `bool`                                   | Whether tapping outside closes the menu              |
-| `preventForegroundInteractions` | `bool`                                   | Prevents UI below the FAB from interaction when open |
-| `onForegroundCallback`          | `VoidCallback?`                          | Called when the FAB stack closes                     |
+| Name                            | Type                                     | Description                                          | Default |
+|---------------------------------|------------------------------------------|------------------------------------------------------|---------|
+| `foregroundWidget`              | `Widget`                                 | Main content shown under the FAB stack               | Required |
+| `columnWidgetBuilder`           | `Widget Function(VoidCallback closeFab)` | Builder for vertical (top) actions                   | Required |
+| `bottomWidgetBuilder`           | `Widget Function(VoidCallback closeFab)` | Builder for horizontal (bottom) actions              | Required |
+| `backgroundColor`               | `Color`                                  | The background canvas color behind the sliding UI    | Required |
+| `fabBackgroundColor`            | `Color`                                  | FAB background color                                 | Required |
+| `fabOpenWidget`                 | `Widget`                                 | Custom widget shown inside FAB when the menu is closed | Required |
+| `fabCloseWidget`                | `Widget`                                 | Custom widget shown inside FAB when the menu is open   | Required |
+| `scaleWidth` / `scaleHeight`    | `double`                                 | How much the foreground slides when FAB opens        | `60` / `60` |
+| `fabSize`                       | `double`                                 | The width and height of the Floating Action Button   | `56.0` |
+| `actionsSpacing`                | `double`                                 | Spacing separation between FAB and action buttons   | `16.0` |
+| `foregroundDimColor`            | `Color`                                  | Optional color overlay to dim foreground UI on open   | `Colors.transparent` |
+| `slideAnimationDuration`        | `Duration`                               | Duration of the slide animation                      | `Duration(milliseconds: 800)` |
+| `openAnimationCurve`            | `Curve`                                  | Curve when opening the FAB stack                     | `Curves.easeOut` |
+| `closeAnimationCurve`           | `Curve`                                  | Curve when closing the FAB stack                     | `Curves.easeInToLinear` |
+| `enableClickToDismiss`          | `bool`                                   | Whether tapping outside closes the menu              | `true` |
+| `preventForegroundInteractions` | `bool`                                   | Prevents UI below the FAB from interaction when open | `true` |
+| `onForegroundCallback`          | `VoidCallback?`                          | Called when the FAB stack closes                     | `null` |
 
 ---
 
@@ -162,9 +169,9 @@ class ExampleApp extends StatelessWidget {
 
 This package is based on the original [`animated_stack`](https://pub.dev/packages/animated_stack) by **Emadeddin Eibo**, but rebuilt with:
 - Builder-based architecture for dynamic UI
-- Modern Flutter compatibility
-- Better tap handling and callbacks
-- Full control over icons, animations, and layout
+- Standard Material FAB transitions and SnackBar alignment support
+- Optimized rendering pipeline decoupled from redundant MediaQuery updates
+- Full control over widgets, spacing, animations, and custom layout overlays
 
 ---
 
