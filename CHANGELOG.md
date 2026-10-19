@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.1.2
+
+### Fixed
+
+- Action buttons beyond the slide area (e.g. a tall column) were visible but ignored taps, because Flutter's Scaffold only hit-tests its FAB slot within the slot's bounds. The slot now sizes itself to the FAB plus the revealed actions, so every action is tappable.
+- Calling `closeFab` after the widget was disposed (e.g. from an async action callback) no longer throws.
+- The previous `CurvedAnimation` is now disposed when `openAnimationCurve` or
+  `closeAnimationCurve` changes.
+
+### Changed
+
+- Action builders now run only while the menu is open.
+
+### Documentation
+
+- Documented that the foreground slides by `scale + fabSize + actionsSpacing`, that actions beyond
+  that area overlay the foreground, and that column items should be no wider than `fabSize` and row
+  items no taller than `fabSize`.
+- README: corrected the `closeAnimationCurve` default (`Curves.easeInOut`) and the install
+  version; the example no longer creates a `GlobalKey` inside `build`; added known limitations.
+- Added library and constructor doc comments, enabled `public_member_api_docs`.
+- Added pub.dev `screenshots` and refreshed `topics`.
+- Added widget tests.
+
+### Note
+
+- 1.1.0 renamed `fabOpenIcon`/`fabCloseIcon` to `fabOpenWidget`/`fabCloseWidget` in a minor release.
+  That is a breaking change for anyone upgrading from 1.0.x; see the 1.1.0 entry for the migration.
+
 ## 1.1.1
 
 ### Changes
@@ -8,7 +37,7 @@
 
 ## 1.1.0
 
-### Changes
+### Breaking
 
 - Renamed `fabOpenIcon` and `fabCloseIcon` (previously restricted to the standard `Icon` type) to
   `fabOpenWidget` and `fabCloseWidget` of type `Widget`. This grants full visual design freedom,
@@ -39,11 +68,11 @@
   `Transform.translate`. This completely decouples calculations from `MediaQueryData` inside the
   build lifecycle, reducing GC allocations and performance overhead.
 
-## [1.0.1] - 2025-10-22
+## 1.0.1
 
 - Improved **README** with better structure, polished examples, and added demo GIF/video preview for
   web usage.
 
-## [1.0.0] - 2025-10-22
+## 1.0.0
 
 - Initial release

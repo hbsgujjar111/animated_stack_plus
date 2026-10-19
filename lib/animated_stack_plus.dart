@@ -1,75 +1,32 @@
+/// An animated FAB stack for Flutter.
+///
+/// [AnimatedStack] slides your primary screen up and to the left when the
+/// floating action button is tapped, revealing a column and a row of action
+/// widgets behind it.
+library;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-
-/// A custom [Stack] designed to resolve Flutter's touch clipping behavior.
-///
-/// By default, when widgets paint outside their parent bounds (using [Clip.none]),
-/// standard Flutter hit-testing rejects any pointer/tap events occurring outside those bounds.
-/// [_OverflowTouchStack] overrides this behavior to allow overflowing action
-/// buttons to remain completely interactive.
-class _OverflowTouchStack extends Stack {
-  const _OverflowTouchStack({super.children = const <Widget>[]})
-    : super(alignment: Alignment.bottomRight, clipBehavior: Clip.none);
-
-  @override
-  RenderStack createRenderObject(BuildContext context) {
-    return _RenderOverflowTouchStack(
-      alignment: alignment,
-      textDirection: textDirection,
-      fit: fit,
-      clipBehavior: clipBehavior,
-    );
-  }
-
-  @override
-  void updateRenderObject(
-    BuildContext context,
-    covariant _RenderOverflowTouchStack renderObject,
-  ) {
-    renderObject
-      ..alignment = alignment
-      ..textDirection = textDirection
-      ..fit = fit
-      ..clipBehavior = clipBehavior;
-  }
-}
-
-/// The low-level rendering proxy implementation of [_OverflowTouchStack].
-///
-/// It overrides the default [hitTest] method of [RenderBox] which restricts
-/// pointer events to the standard bounding box (`size.contains(position)`).
-/// Instead, it forwards hit-testing requests straight to its children regardless of bounds,
-/// but preserves standard hit-testing transparency on empty background space.
-class _RenderOverflowTouchStack extends RenderStack {
-  _RenderOverflowTouchStack({
-    super.alignment,
-    super.textDirection,
-    super.fit,
-    super.clipBehavior,
-  });
-
-  @override
-  bool hitTest(BoxHitTestResult result, {required Offset position}) {
-    // Bypass the typical size boundary check to check overflowing children.
-    // If a child is tapped (even if outside the container's formal dimensions),
-    // we capture the hit and register the tap event.
-    if (hitTestChildren(result, position: position) || hitTestSelf(position)) {
-      result.add(BoxHitTestEntry(this, position));
-      return true;
-    }
-    return false;
-  }
-}
 
 /// A highly customizable overlay layout that slides your primary UI (foreground)
 /// outward to reveal background action rows and columns behind it.
+///
+/// The foreground slides by `scale + fabSize + actionsSpacing` on each axis.
+/// The actions are drawn in the [Scaffold] FAB slot, above the foreground, so
+/// a column taller than [scaleHeight] (or a row wider than [scaleWidth]) simply
+/// overlays the foreground. Keep the scale values small if you have many
+/// actions and do not want the foreground to move far.
+///
+/// Items in the column should be no wider than [fabSize], and items in the row
+/// no taller than [fabSize].
 class AnimatedStack extends StatefulWidget {
-  /// The horizontal space (in pixels) that the revealed bottom row action
-  /// buttons will occupy when the FAB menu is opened.
+  /// Extra horizontal distance (in pixels) the foreground slides to the left,
+  /// on top of [fabSize] and [actionsSpacing]. The total slide is
+  /// `scaleWidth + fabSize + actionsSpacing`.
   final double scaleWidth;
 
-  /// The vertical space (in pixels) that the revealed top column action
-  /// buttons will occupy when the FAB menu is opened.
+  /// Extra vertical distance (in pixels) the foreground slides up, on top of
+  /// [fabSize] and [actionsSpacing]. The total slide is
+  /// `scaleHeight + fabSize + actionsSpacing`. Must be at least 40.
   final double scaleHeight;
 
   /// The primary application UI shown initially (usually your [Scaffold] or screen container).
@@ -125,6 +82,11 @@ class AnimatedStack extends StatefulWidget {
   /// The margin space (in pixels) separating your main FAB from your background actions.
   final double actionsSpacing;
 
+  /// Creates an [AnimatedStack].
+  ///
+  /// Asserts that [scaleHeight] is at least 40, and that
+  /// [enableClickToDismiss] is only true when [preventForegroundInteractions]
+  /// is also true.
   const AnimatedStack({
     super.key,
     this.scaleWidth = 60,
@@ -201,12 +163,15 @@ class _AnimatedStackState extends State<AnimatedStack>
     }
     if (oldWidget.openAnimationCurve != widget.openAnimationCurve ||
         oldWidget.closeAnimationCurve != widget.closeAnimationCurve) {
+      final oldCurved = _curvedAnimation;
       _curvedAnimation = CurvedAnimation(
         parent: _animationController,
         curve: widget.openAnimationCurve,
         reverseCurve: widget.closeAnimationCurve,
       );
       _updateSlideOffset();
+      // Release the replaced animation's status listener on the controller.
+      oldCurved.dispose();
     } else if (oldWidget.scaleWidth != widget.scaleWidth ||
         oldWidget.scaleHeight != widget.scaleHeight ||
         oldWidget.fabSize != widget.fabSize ||
@@ -231,97 +196,84 @@ class _AnimatedStackState extends State<AnimatedStack>
 
   /// Exposed callback used by children to close the menu.
   void _closeFab() {
+    // Action callbacks may complete asynchronously after this widget is gone.
+    if (!mounted) return;
     if (_opened) _toggle();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Establish a cohesive bounding box for the entire interactive menu stack.
-    // Standard FAB layouts read this size to position the widget relative to the screen.
-    final double largeWidth =
-        widget.scaleWidth + widget.fabSize + widget.actionsSpacing;
-    final double largeHeight =
-        widget.scaleHeight + widget.fabSize + widget.actionsSpacing;
+    // Distance from the slot's bottom/right edge to the revealed actions.
+    final double actionsOffset = widget.fabSize + widget.actionsSpacing;
 
     return Scaffold(
       // Placing the menu inside the Scaffold's FAB slot ensures that everything shifts
       // upward in perfect unison when SnackBars, persistent bottom sheets, or keyboard offsets occur.
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
-      floatingActionButton: SizedBox(
-        width: largeWidth,
-        height: largeHeight,
-        child: _OverflowTouchStack(
-          children: [
-            // Vertical Column Stack (centered horizontally above the primary FAB)
-            Positioned(
-              bottom: widget.fabSize + widget.actionsSpacing,
-              right: 0,
+      // The slot is a Stack sized by its non-positioned children, so its bounds
+      // always cover the FAB plus whatever actions are currently revealed.
+      // Scaffold hit-tests the slot within those bounds only, so every action
+      // must lie inside them to be tappable.
+      floatingActionButton: Stack(
+        alignment: Alignment.bottomRight,
+        children: [
+          // Vertical column, centered horizontally above the primary FAB.
+          if (_opened)
+            Padding(
+              padding: EdgeInsets.only(bottom: actionsOffset),
               child: SizedBox(
                 width: widget.fabSize,
-                child: Align(
-                  alignment: Alignment
-                      .center, // Automatically centers the column horizontally
-                  child: Visibility(
-                    visible: _opened,
-                    child: widget.columnWidgetBuilder(_closeFab),
-                  ),
+                child: UnconstrainedBox(
+                  constrainedAxis: Axis.horizontal,
+                  child: widget.columnWidgetBuilder(_closeFab),
                 ),
               ),
             ),
 
-            // Horizontal Row Stack (centered vertically to the left of the primary FAB)
-            Positioned(
-              right: widget.fabSize + widget.actionsSpacing,
-              bottom: 0,
+          // Horizontal row, centered vertically to the left of the primary FAB.
+          if (_opened)
+            Padding(
+              padding: EdgeInsets.only(right: actionsOffset),
               child: SizedBox(
                 height: widget.fabSize,
-                child: Align(
-                  alignment: Alignment
-                      .center, // Automatically centers the row vertically
-                  child: Visibility(
-                    visible: _opened,
-                    child: widget.bottomWidgetBuilder(_closeFab),
-                  ),
+                child: UnconstrainedBox(
+                  constrainedAxis: Axis.vertical,
+                  child: widget.bottomWidgetBuilder(_closeFab),
                 ),
               ),
             ),
 
-            // Main FAB Trigger (handles visual transitions between open/closed widget states)
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: SizedBox(
-                width: widget.fabSize,
-                height: widget.fabSize,
-                child: FloatingActionButton(
-                  onPressed: _toggle,
-                  backgroundColor: widget.fabBackgroundColor,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeOutBack,
-                    switchOutCurve: Curves.easeIn,
-                    transitionBuilder: (child, animation) {
-                      return RotationTransition(
-                        turns: animation,
-                        child: ScaleTransition(scale: animation, child: child),
-                      );
-                    },
-                    child: _opened
-                        ? KeyedSubtree(
-                            key: const ValueKey('fab_close'),
-                            child: widget.fabCloseWidget,
-                          )
-                        : KeyedSubtree(
-                            key: const ValueKey('fab_open'),
-                            child: widget.fabOpenWidget,
-                          ),
-                  ),
-                ),
+          // Main FAB trigger (handles visual transitions between open/closed widget states)
+          SizedBox(
+            width: widget.fabSize,
+            height: widget.fabSize,
+            child: FloatingActionButton(
+              onPressed: _toggle,
+              backgroundColor: widget.fabBackgroundColor,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                switchInCurve: Curves.easeOutBack,
+                switchOutCurve: Curves.easeIn,
+                transitionBuilder: (child, animation) {
+                  return RotationTransition(
+                    turns: animation,
+                    child: ScaleTransition(scale: animation, child: child),
+                  );
+                },
+                child: _opened
+                    ? KeyedSubtree(
+                        key: const ValueKey('fab_close'),
+                        child: widget.fabCloseWidget,
+                      )
+                    : KeyedSubtree(
+                        key: const ValueKey('fab_open'),
+                        child: widget.fabOpenWidget,
+                      ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       body: Stack(
         children: [

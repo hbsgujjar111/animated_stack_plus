@@ -1,6 +1,12 @@
 import 'package:animated_stack_plus/animated_stack_plus.dart';
 import 'package:flutter/material.dart';
 
+// Global ScaffoldMessengerState key allows posting SnackBar notifications
+// from background actions that lack direct BuildContext access. Created once,
+// outside build, so it survives rebuilds.
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
+
 void main() {
   runApp(const ExampleApp());
 }
@@ -10,11 +16,6 @@ class ExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Global ScaffoldMessengerState Key allows posting SnackBar notifications
-    // globally from background actions that lack direct nestedBuildContext access.
-    final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
-        GlobalKey<ScaffoldMessengerState>();
-
     return MaterialApp(
       scaffoldMessengerKey: scaffoldMessengerKey,
       title: 'AnimatedStackPlus Example',
@@ -29,8 +30,8 @@ class ExampleApp extends StatelessWidget {
 
         // Decoupled spacing definitions
         scaleWidth: 60,
-        scaleHeight: 40,
-        // Expanded height to comfortably accommodate vertical action rows
+        // How far the foreground slides (on top of FAB size + spacing).
+        scaleHeight: 60,
         // Vertical action buttons builder
         columnWidgetBuilder: (closeFab) => Column(
           spacing: 20,
