@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.2.0
+
+### Added
+
+- `AnimatedStackController` (`open`, `close`, `toggle`, `isOpen`) and the `controller` parameter to control the menu from code.
+- `onOpen` and `onClose` callbacks.
+- `maxSlideFraction` to cap how far the foreground slides.
+- `closeOnBackPress` (default `true`): the system back button closes an open menu.
+- `animateActions` (default `false`) to fade actions in and out with the slide.
+- `openTooltip`, `closeTooltip` and `heroTag` for the FAB.
+- Live web demo on GitHub Pages.
+- GitHub Actions CI (analyze and test).
+
+### Changed
+
+- The layout and slide direction now mirror in right-to-left text directions.
+- Tapping the revealed background area now dismisses the menu, as documented for `enableClickToDismiss`.
+- While the menu is open, the back button closes it instead of popping the route. Set `closeOnBackPress: false` to keep the old behavior.
+- The FAB's default hero tag is now private to this package, so it no longer collides with other floating action buttons. Pass `heroTag: null` to disable it.
+
+### Deprecated
+
+- `onForegroundCallback`: use `onClose`. It will be removed in 2.0.0.
+
+### Fixed
+
+- LICENSE: added the original `animated_stack` copyright notice.
+
 ## 1.1.2
 
 ### Fixed

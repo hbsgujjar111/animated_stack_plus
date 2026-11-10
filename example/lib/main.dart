@@ -11,8 +11,22 @@ void main() {
   runApp(const ExampleApp());
 }
 
-class ExampleApp extends StatelessWidget {
+class ExampleApp extends StatefulWidget {
   const ExampleApp({super.key});
+
+  @override
+  State<ExampleApp> createState() => _ExampleAppState();
+}
+
+class _ExampleAppState extends State<ExampleApp> {
+  // Lets the app open/close the menu from outside the widget.
+  final AnimatedStackController _controller = AnimatedStackController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,17 +35,20 @@ class ExampleApp extends StatelessWidget {
       title: 'AnimatedStackPlus Example',
       debugShowCheckedModeBanner: false,
       home: AnimatedStack(
+        controller: _controller,
         backgroundColor: Colors.grey[200]!,
         fabBackgroundColor: Colors.teal,
+        openTooltip: 'Open menu',
+        closeTooltip: 'Close menu',
 
         // Custom Widgets (allowing complete design freedom over standard Icon constraints)
         fabOpenWidget: const Icon(Icons.menu, color: Colors.white),
         fabCloseWidget: const Icon(Icons.close, color: Colors.white),
 
-        // Decoupled spacing definitions
-        scaleWidth: 60,
         // How far the foreground slides (on top of FAB size + spacing).
+        scaleWidth: 60,
         scaleHeight: 60,
+
         // Vertical action buttons builder
         columnWidgetBuilder: (closeFab) => Column(
           spacing: 20,
@@ -77,6 +94,7 @@ class ExampleApp extends StatelessWidget {
 
         // Your main application scaffold which translates back during active FAB states
         foregroundWidget: Scaffold(
+          backgroundColor: Colors.teal[50]!,
           appBar: AppBar(
             title: const Text(
               'AnimatedStackPlus Example',
@@ -85,10 +103,20 @@ class ExampleApp extends StatelessWidget {
             backgroundColor: Colors.teal,
             centerTitle: true,
           ),
-          body: const Center(
-            child: Text(
-              'Hello World',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 16,
+              children: [
+                const Text(
+                  'Hello World',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                ),
+                ElevatedButton(
+                  onPressed: _controller.toggle,
+                  child: const Text('Open menu from code'),
+                ),
+              ],
             ),
           ),
         ),

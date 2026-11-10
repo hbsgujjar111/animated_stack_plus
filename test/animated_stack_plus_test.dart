@@ -45,6 +45,15 @@ AnimatedStack _stack(
   Curve openCurve = Curves.easeOut,
   Curve closeCurve = Curves.easeInOut,
   void Function(VoidCallback close)? captureClose,
+  double? maxSlideFraction,
+  AnimatedStackController? controller,
+  bool closeOnBackPress = true,
+  bool animateActions = false,
+  VoidCallback? onOpen,
+  VoidCallback? onClose,
+  VoidCallback? legacyCallback,
+  String? openTooltip,
+  String? closeTooltip,
 }) {
   return AnimatedStack(
     scaleWidth: scaleWidth,
@@ -61,7 +70,19 @@ AnimatedStack _stack(
     fabBackgroundColor: Colors.teal,
     fabOpenWidget: const Icon(Icons.menu),
     fabCloseWidget: const Icon(Icons.close),
-    onForegroundCallback: () => c.closed++,
+    onClose: () {
+      c.closed++;
+      onClose?.call();
+    },
+    onOpen: onOpen,
+    // ignore: deprecated_member_use_from_same_package
+    onForegroundCallback: legacyCallback,
+    maxSlideFraction: maxSlideFraction,
+    controller: controller,
+    closeOnBackPress: closeOnBackPress,
+    animateActions: animateActions,
+    openTooltip: openTooltip,
+    closeTooltip: closeTooltip,
     columnWidgetBuilder: (close) {
       captureClose?.call(close);
       return Column(
@@ -148,6 +169,16 @@ void main() {
   group('assertions (failure paths)', () {
     test('scaleHeight below 40 asserts', () {
       expect(() => _stack(_Counts(), scaleHeight: 39), throwsAssertionError);
+    });
+    test('maxSlideFraction outside (0, 1] asserts', () {
+      expect(
+        () => _stack(_Counts(), maxSlideFraction: 0),
+        throwsAssertionError,
+      );
+      expect(
+        () => _stack(_Counts(), maxSlideFraction: 1.5),
+        throwsAssertionError,
+      );
     });
     test('click-to-dismiss without foreground blocking asserts', () {
       expect(
@@ -396,7 +427,7 @@ void main() {
       final slot = find.ancestor(
         of: _fab,
         matching: find.byWidgetPredicate(
-          (w) => w is Stack && w.alignment == Alignment.bottomRight,
+          (w) => w is Stack && w.alignment == AlignmentDirectional.bottomEnd,
         ),
       );
       expect(tester.getSize(slot.first), const Size(56, 56));
@@ -507,21 +538,32 @@ void main() {
     });
   });
 
-  group('known gaps (skipped until fixed)', () {
-    // M3: tap on the revealed background strip should dismiss.
-    testWidgets('tap on revealed background strip dismisses (M3)', (
-      tester,
-    ) async {
+  group('background tap dismiss (M3, 1.2.0)', () {
+    testWidgets('tap on revealed background strip dismisses', (tester) async {
       await tester.pumpWidget(_host(_stack(_Counts())));
       await _toggle(tester);
       await tester.tapAt(const Offset(700, 100));
       await tester.pumpAndSettle();
       expect(find.byKey(_colTopKey), findsNothing);
-    }, skip: true);
+    });
 
-    // M4: in RTL the row should extend away from the screen edge, to the
-    // opposite side of the FAB compared with LTR.
-    testWidgets('RTL mirrors the action row (M4)', (tester) async {
+    testWidgets('does nothing when enableClickToDismiss is false', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _host(_stack(_Counts(), enableClickToDismiss: false)),
+      );
+      await _toggle(tester);
+      await tester.tapAt(const Offset(700, 100));
+      await tester.pumpAndSettle();
+      expect(find.byKey(_colTopKey), findsOneWidget);
+    });
+  });
+
+  group('RTL (M4, 1.2.0)', () {
+    testWidgets('row extends away from the FAB on the start side', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _host(_stack(_Counts()), direction: TextDirection.rtl),
       );
@@ -530,15 +572,243 @@ void main() {
         tester.getCenter(find.byKey(_rowRightKey)).dx,
         greaterThan(tester.getCenter(_fab).dx),
       );
-    }, skip: true);
+    });
 
-    // M5: system back should close an open menu.
-    testWidgets('back button closes the open menu (M5)', (tester) async {
-      await tester.pumpWidget(_host(_stack(_Counts())));
+    testWidgets('foreground slides right and up in RTL', (tester) async {
+      await tester.pumpWidget(
+        _host(_stack(_Counts()), direction: TextDirection.rtl),
+      );
+      await _toggle(tester);
+      final o = tester.getTopLeft(find.byKey(_fgKey));
+      expect(o.dx, moreOrLessEquals(_slide));
+      expect(o.dy, moreOrLessEquals(-_slide));
+    });
+
+    testWidgets('actions are tappable in RTL', (tester) async {
+      final c = _Counts();
+      await tester.pumpWidget(_host(_stack(c), direction: TextDirection.rtl));
+      await _toggle(tester);
+      await tester.tap(find.byKey(_rowLeftKey));
+      await tester.pumpAndSettle();
+      expect(c.rowLeft, 1);
+    });
+  });
+
+  group('back button (M5, 1.2.0)', () {
+    testWidgets('closes an open menu', (tester) async {
+      final c = _Counts();
+      await tester.pumpWidget(_host(_stack(c)));
       await _toggle(tester);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.byKey(_colTopKey), findsNothing);
-    }, skip: true);
+      expect(c.closed, 1);
+    });
+
+    testWidgets('closeOnBackPress=false leaves the menu open', (tester) async {
+      await tester.pumpWidget(
+        _host(_stack(_Counts(), closeOnBackPress: false)),
+      );
+      await _toggle(tester);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byKey(_colTopKey), findsOneWidget);
+    });
+  });
+
+  group('controller and callbacks', () {
+    testWidgets('open, close and toggle drive the menu and isOpen', (
+      tester,
+    ) async {
+      final controller = AnimatedStackController();
+      addTearDown(controller.dispose);
+      var notified = 0;
+      controller.addListener(() => notified++);
+      await tester.pumpWidget(_host(_stack(_Counts(), controller: controller)));
+      expect(controller.isOpen, isFalse);
+
+      controller.open();
+      await tester.pumpAndSettle();
+      expect(controller.isOpen, isTrue);
+      expect(find.byKey(_colTopKey), findsOneWidget);
+      expect(notified, 1);
+
+      controller.open(); // already open: no-op
+      expect(notified, 1);
+
+      controller.toggle();
+      await tester.pumpAndSettle();
+      expect(controller.isOpen, isFalse);
+      expect(find.byKey(_colTopKey), findsNothing);
+      expect(notified, 2);
+
+      controller.close(); // already closed: no-op
+      expect(notified, 2);
+    });
+
+    testWidgets('isOpen follows FAB taps', (tester) async {
+      final controller = AnimatedStackController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(_host(_stack(_Counts(), controller: controller)));
+      await _toggle(tester);
+      expect(controller.isOpen, isTrue);
+      await _toggle(tester);
+      expect(controller.isOpen, isFalse);
+    });
+
+    testWidgets('detached controller is a no-op after dispose', (tester) async {
+      final controller = AnimatedStackController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(_host(_stack(_Counts(), controller: controller)));
+      await tester.pumpWidget(const SizedBox());
+      expect(() => controller.open(), returnsNormally);
+      expect(controller.isOpen, isFalse);
+    });
+
+    testWidgets('swapping controllers re-attaches', (tester) async {
+      final first = AnimatedStackController();
+      final second = AnimatedStackController();
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+      final current = ValueNotifier<AnimatedStackController>(first);
+      await tester.pumpWidget(
+        _host(
+          ValueListenableBuilder<AnimatedStackController>(
+            valueListenable: current,
+            builder: (context, v, child) => _stack(_Counts(), controller: v),
+          ),
+        ),
+      );
+      current.value = second;
+      await tester.pump();
+      first.open(); // detached: must do nothing
+      await tester.pumpAndSettle();
+      expect(find.byKey(_colTopKey), findsNothing);
+      second.open();
+      await tester.pumpAndSettle();
+      expect(find.byKey(_colTopKey), findsOneWidget);
+    });
+
+    testWidgets('onOpen fires on open, onClose on close', (tester) async {
+      var opened = 0;
+      var closed = 0;
+      await tester.pumpWidget(
+        _host(
+          _stack(_Counts(), onOpen: () => opened++, onClose: () => closed++),
+        ),
+      );
+      await _toggle(tester);
+      expect((opened, closed), (1, 0));
+      await _toggle(tester);
+      expect((opened, closed), (1, 1));
+    });
+
+    testWidgets('deprecated onForegroundCallback still fires on close', (
+      tester,
+    ) async {
+      var legacy = 0;
+      await tester.pumpWidget(
+        _host(_stack(_Counts(), legacyCallback: () => legacy++)),
+      );
+      await _toggle(tester);
+      expect(legacy, 0);
+      await _toggle(tester);
+      expect(legacy, 1);
+    });
+  });
+
+  group('maxSlideFraction', () {
+    testWidgets('caps the slide per axis', (tester) async {
+      await tester.pumpWidget(_host(_stack(_Counts(), maxSlideFraction: 0.1)));
+      await _toggle(tester);
+      final o = tester.getTopLeft(find.byKey(_fgKey));
+      expect(o.dx, moreOrLessEquals(-80)); // 800 * 0.1 < 132
+      expect(o.dy, moreOrLessEquals(-60)); // 600 * 0.1 < 132
+    });
+
+    testWidgets('does not enlarge a slide that is already smaller', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_host(_stack(_Counts(), maxSlideFraction: 1)));
+      await _toggle(tester);
+      expect(
+        tester.getTopLeft(find.byKey(_fgKey)).dx,
+        moreOrLessEquals(-_slide),
+      );
+    });
+  });
+
+  group('animateActions', () {
+    testWidgets('actions stay mounted while closing, then are removed', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_host(_stack(_Counts(), animateActions: true)));
+      await _toggle(tester);
+      await tester.tap(_fab);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byKey(_colTopKey), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.byKey(_colTopKey), findsNothing);
+    });
+
+    testWidgets('default removes actions immediately on close', (tester) async {
+      await tester.pumpWidget(_host(_stack(_Counts())));
+      await _toggle(tester);
+      await tester.tap(_fab);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byKey(_colTopKey), findsNothing);
+    });
+
+    testWidgets('actions are not tappable while fading out', (tester) async {
+      final c = _Counts();
+      await tester.pumpWidget(_host(_stack(c, animateActions: true)));
+      await _toggle(tester);
+      await tester.tap(_fab);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.byKey(_colBottomKey), warnIfMissed: false);
+      expect(c.colBottom, 0);
+      await tester.pumpAndSettle();
+    });
+  });
+
+  group('tooltip and hero tag', () {
+    testWidgets('tooltips follow the open state', (tester) async {
+      await tester.pumpWidget(
+        _host(
+          _stack(
+            _Counts(),
+            openTooltip: 'Open menu',
+            closeTooltip: 'Close menu',
+          ),
+        ),
+      );
+      expect(find.byTooltip('Open menu'), findsOneWidget);
+      await _toggle(tester);
+      expect(find.byTooltip('Close menu'), findsOneWidget);
+    });
+
+    testWidgets('default hero tag is set and can be disabled', (tester) async {
+      await tester.pumpWidget(_host(_stack(_Counts())));
+      expect(tester.widget<FloatingActionButton>(_fab).heroTag, isNotNull);
+
+      await tester.pumpWidget(
+        _host(
+          AnimatedStack(
+            heroTag: null,
+            backgroundColor: Colors.grey,
+            fabBackgroundColor: Colors.teal,
+            fabOpenWidget: const Icon(Icons.menu),
+            fabCloseWidget: const Icon(Icons.close),
+            columnWidgetBuilder: (close) => const SizedBox(),
+            bottomWidgetBuilder: (close) => const SizedBox(),
+            foregroundWidget: const SizedBox(),
+          ),
+        ),
+      );
+      expect(tester.widget<FloatingActionButton>(_fab).heroTag, isNull);
+    });
   });
 }
